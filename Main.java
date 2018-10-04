@@ -13,7 +13,7 @@ import javax.swing.*;
 import java.security.Key;
 import java.util.Scanner;
 import javax.crypto.Cipher;
-import org.apache.commons.io.FileUtils;
+//import org.apache.commons.io.FileUtils;
 /*
 import java.util.Map.Entry;
 import lc.kra.system.keyboard.GlobalKeyboardHook;
@@ -183,29 +183,34 @@ public class Main {
         	return bufferedImage;
     	}
     	public static void detectWar() {
-        	if (new File("C:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()) {
-                	war3Dir = ("C:/Program Files (x86)/Warcraft III/Warcraft III.exe");
-        	}
-        	else if (new File("D:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()){
-
-            	war3Dir = ("D:/Program Files (x86)/Warcraft III/Warcraft III.exe");
-        	}
-        	else if (new File("D:/Program Files/Warcraft III/Warcraft III.exe").exists()){
-                	war3Dir = ("D:/Program Files/Warcraft III/Warcraft III.exe");
-        	}
-           	else if (new File("C:/Program Files/Warcraft III/Warcraft III.exe").exists()){
+    		//"HKLM\Software\WOW6432Node\Blizzard Entertainment\Warcraft III" /v InstallPath
+	        war3Dir = WindowsRegistry.readRegistry("HKLM\\Software\\WOW6432Node\\Blizzard Entertainment\\Warcraft III", "GamePath");
+	        System.out.println(war3Dir);
+	        if(war3Dir == null) {
+	        	if (new File("C:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()) {
+	        		war3Dir = ("C:/Program Files (x86)/Warcraft III/Warcraft III.exe");
+	        	}
+	        	else if (new File("D:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()){
+	        		
+	        		war3Dir = ("D:/Program Files (x86)/Warcraft III/Warcraft III.exe");
+	        	}
+	        	else if (new File("D:/Program Files/Warcraft III/Warcraft III.exe").exists()){
+	        		war3Dir = ("D:/Program Files/Warcraft III/Warcraft III.exe");
+	        	}
+	        	else if (new File("C:/Program Files/Warcraft III/Warcraft III.exe").exists()){
                 	war3Dir = ("C:/Program Files/Warcraft III/Warcraft III.exe");
-           	}
-           	else if (new File("C:/Warcraft III/Warcraft III.exe").exists()){
-                	war3Dir = ("C:/Warcraft III/Warcraft III.exe");
-           	}
-           	else if (new File("D:/Warcraft III/Warcraft III.exe").exists()){
-                	war3Dir = ("D:/Warcraft III/Warcraft III.exe");
-           	}
-           	else {
-               	JOptionPane.showMessageDialog(null, "Can't Detect Warcraft 3 Directory", "Error: " + "Warcraft 3 Missing", JOptionPane.INFORMATION_MESSAGE);
-               	System.exit(0);
-           	}
+	        	}
+	        	else if (new File("C:/Warcraft III/Warcraft III.exe").exists()){
+	        		war3Dir = ("C:/Warcraft III/Warcraft III.exe");
+	        	}
+	        	else if (new File("D:/Warcraft III/Warcraft III.exe").exists()){
+	        		war3Dir = ("D:/Warcraft III/Warcraft III.exe");
+	        	}
+	        	else {
+	        		JOptionPane.showMessageDialog(null, "Can't Detect Warcraft 3 Directory", "Error: " + "Warcraft 3 Missing", JOptionPane.INFORMATION_MESSAGE);
+	        		System.exit(0);
+	        	}
+	        }
            	 
        	}
    	 
@@ -311,11 +316,14 @@ public class Main {
         	return mycolor;
     	}
     	public static byte[] encrypt(String pass)
-			//Not available publicly, feelf ree to creat your own
+    	{
+			return null;
+        	//Not public
     	}
     	public static String decrypt(byte[] encr)
     	{
-			//Not available publicly
+			return key;
+        	//Not public
     	}
     	public static boolean checkWhite(BufferedImage img) {
            	for (int x = 0; x < img.getWidth(); x++) {
@@ -382,10 +390,11 @@ public class Main {
           	}
     	}
     	public static void getPass() throws IOException {
+        	
         	//int[] positions = new int[5]; // The stored positions of where to check an image for specific colors
         	//File opts = new File("opts"); //Create new file to store password and positions
         	File f = new File("opts.txt");
-        	//if(f.exists() && !f.isDirectory()) { // See if the file already exists and if it contains data
+        	//if(opts.exists() && !opts.isDirectory()) { // See if the file already exists and if it contains data
 
           	//byte[] epass = Files.readAllBytes(opts.toPath());
           	//pass = decrypt(epass);
@@ -395,10 +404,6 @@ public class Main {
 				pass = sc.nextLine();
               	war3Dir = sc.nextLine();
                 	sc.close();
-          	}
-          	else {
-              	JOptionPane.showMessageDialog(null, "Missing or incomplete file, maybe deleted? Try deleting opts and/or opts.txt", "Error: " + "Missing Position Data", JOptionPane.INFORMATION_MESSAGE);
-              	System.exit(0);
           	}
          	 
         	//}
@@ -411,9 +416,9 @@ public class Main {
         	    }
         	    pass = new String(pwField.getPassword());
             	PrintWriter writer = new PrintWriter("opts.txt", "UTF-8");
-				writer.println(pass);
             	//FileUtils.writeByteArrayToFile(new File("opts"), encrypt(pass));
             	detectWar();
+				writer.println(pass);
             	writer.println(war3Dir);
             	writer.close();
         	}
@@ -441,7 +446,6 @@ public class Main {
    		 }     	 
       	});
     	}
-
    	 
 }
 
