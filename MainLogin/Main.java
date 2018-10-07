@@ -13,7 +13,7 @@ import javax.swing.*;
 import java.security.Key;
 import java.util.Scanner;
 import javax.crypto.Cipher;
-//import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FileUtils;
 /*
 import java.util.Map.Entry;
 import lc.kra.system.keyboard.GlobalKeyboardHook;
@@ -184,6 +184,7 @@ public class Main {
     	}
     	public static void detectWar() {
     		//"HKLM\Software\WOW6432Node\Blizzard Entertainment\Warcraft III" /v InstallPath
+    		if(System.getProperty("os.name") == "Windows") {
 	        war3Dir = WindowsRegistry.readRegistry("HKLM\\Software\\WOW6432Node\\Blizzard Entertainment\\Warcraft III", "GamePath");
 	        System.out.println(war3Dir);
 	        if(war3Dir == null) {
@@ -206,9 +207,10 @@ public class Main {
 	        	else if (new File("D:/Warcraft III/Warcraft III.exe").exists()){
 	        		war3Dir = ("D:/Warcraft III/Warcraft III.exe");
 	        	}
+    		}
 	        	else {
-	        		JOptionPane.showMessageDialog(null, "Can't Detect Warcraft 3 Directory", "Error: " + "Warcraft 3 Missing", JOptionPane.INFORMATION_MESSAGE);
-	        		System.exit(0);
+	        		JFrame path = new JFrame("Warcraft 3 Executable Path");
+	        		war3Dir = JOptionPane.showInputDialog(path, "Please include /Warcraft III.exe");
 	        	}
 	        }
            	 
@@ -315,16 +317,7 @@ public class Main {
         	Color mycolor = new Color(img.getRGB(x, y));
         	return mycolor;
     	}
-    	public static byte[] encrypt(String pass)
-    	{
-			return null;
-        	//Not public
-    	}
-    	public static String decrypt(byte[] encr)
-    	{
-			return key;
-        	//Not public
-    	}
+
     	public static boolean checkWhite(BufferedImage img) {
            	for (int x = 0; x < img.getWidth(); x++) {
             	for (int y = 0; y < img.getHeight(); y++) {
@@ -337,8 +330,8 @@ public class Main {
            	return false;
     	}
     	public static void warLogin(Robot robot, JLabel label) throws AWTException, IOException, InterruptedException {
+          	label.setText("Waiting for launch");
         	while(colorCheck(1, 1, 0, 0, 0, robot) !=true || colorCheck(width/2, height/2, 0, 0, 0, robot) == true) {
-              	label.setText("Waiting for launch");
               	Thread.sleep(25);
           	}
           	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, false);
@@ -389,40 +382,6 @@ public class Main {
                      	robot.keyPress(KeyEvent.VK_ENTER);
           	}
     	}
-    	public static void getPass() throws IOException {
-        	
-        	//int[] positions = new int[5]; // The stored positions of where to check an image for specific colors
-        	//File opts = new File("opts"); //Create new file to store password and positions
-        	File f = new File("opts.txt");
-        	//if(opts.exists() && !opts.isDirectory()) { // See if the file already exists and if it contains data
-
-          	//byte[] epass = Files.readAllBytes(opts.toPath());
-          	//pass = decrypt(epass);
-         	 
-          	if(f.exists() && !f.isDirectory() && new BufferedReader(new FileReader("opts.txt")).readLine() != null) {
-              	Scanner sc = new Scanner(f);
-				pass = sc.nextLine();
-              	war3Dir = sc.nextLine();
-                	sc.close();
-          	}
-         	 
-        	//}
-        	else {
-        		JPasswordField pwField = new JPasswordField(10);
-        		int action = JOptionPane.showConfirmDialog(null, pwField,"Enter Password",JOptionPane.OK_CANCEL_OPTION);
-        	    if(action < 0) {
-        	    	JOptionPane.showMessageDialog(null,"Cancel, X or escape key selected");
-        	    	System.exit(0);;
-        	    }
-        	    pass = new String(pwField.getPassword());
-            	PrintWriter writer = new PrintWriter("opts.txt", "UTF-8");
-            	//FileUtils.writeByteArrayToFile(new File("opts"), encrypt(pass));
-            	detectWar();
-				writer.println(pass);
-            	writer.println(war3Dir);
-            	writer.close();
-        	}
-    	}
     	public static void endC(Robot robot) {
    		 JFrame f=new JFrame("Grab End Screen");       	 
      	 JButton b=new JButton("Click me on game end");    
@@ -445,6 +404,97 @@ public class Main {
    			 
    		 }     	 
       	});
+    	}
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+    	public static String RadioButtonDialog(){
+            JComboBox<?> b1 = new JComboBox();
+            b1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Windowed Fullscreen", "Native Fullscreen", "Windowed"}));
+            
+            JPanel myPanel = new JPanel();
+            myPanel.add(b1);
+
+            int result = JOptionPane.showConfirmDialog(null, myPanel,
+                    "Launch Options", JOptionPane.OK_CANCEL_OPTION);
+            if (result == JOptionPane.OK_OPTION) {
+                System.out.println("Field 1: " + b1.getSelectedIndex());
+            }
+            switch(b1.getSelectedIndex()) {
+            case 0:
+            	return "";
+            case 1:
+            	JOptionPane.showMessageDialog(null,"Warning, auto close will not currently function in native fullscreen.");
+            	return " -nativefullscr";
+            case 2:
+            	JOptionPane.showMessageDialog(null,"Warning, auto close will not currently function in windowed mode.");
+            	return " -windowed";
+            }
+            return "";
+    }
+    	public static void writeLaunch() throws IOException {
+    		String option = RadioButtonDialog();
+    		File f = new File("opts.txt");
+    		
+    		if(f.exists() && !f.isDirectory() && new BufferedReader(new FileReader("opts.txt")).readLine() != null) {
+    			@SuppressWarnings("resource")
+    			Scanner sc = new Scanner(f);
+    			String old = sc.nextLine();
+    			FileWriter writer = new FileWriter(f, false);
+    			if (old.contains(" -nativefullscr")){
+    				old = old.substring(0,old.length()- 15) + option;
+    				System.out.println(old);
+    				writer.write(old);
+    				//fw.write(old);
+    			}
+    			else if (old.contains(" -windowed")){
+    				old = old.substring(0,old.length()- 10) + option;
+    				System.out.println(old);
+    				writer.write(old);
+    				//fw.write(old);
+    			}
+    			else {
+    				old = old + option;
+    				System.out.println(old);
+    				writer.write(old);
+    				//fw.write(old);
+    			}
+    			writer.close();
+    		}
+    	}
+    	public static byte[] encrypt(String pass)
+    	{
+			return null;
+        	//Not public
+    	}
+    	public static String decrypt(byte[] encr)
+    	{
+			return key;
+        	//Not public
+    	}
+    	public static void getPass() throws IOException {
+        	
+        	
+        	File f = new File("opts.txt");
+          	if(f.exists() && !f.isDirectory() && new BufferedReader(new FileReader("opts.txt")).readLine() != null) {
+              	Scanner sc = new Scanner(f);
+				pass = sc.nextLine();
+              	war3Dir = sc.nextLine();
+                	sc.close();
+          	}
+         	 
+        	else {
+        		JPasswordField pwField = new JPasswordField(10);
+        		int action = JOptionPane.showConfirmDialog(null, pwField,"Enter Password",JOptionPane.OK_CANCEL_OPTION);
+        	    if(action < 0) {
+        	    	JOptionPane.showMessageDialog(null,"Cancel, X or escape key selected");
+        	    	System.exit(0);;
+        	    }
+        	    pass = new String(pwField.getPassword());
+            	PrintWriter writer = new PrintWriter("opts.txt", "UTF-8");
+            	detectWar();
+				writer.println(pass);
+            	writer.println(war3Dir);
+            	writer.close();
+        	}
     	}
    	 
 }
