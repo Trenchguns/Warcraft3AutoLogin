@@ -29,6 +29,7 @@ public class Main {
 	public static String war3Dir;
 	public boolean ctrlPressed;
 	public boolean qPressed;
+	public static String nextgame;
    // private static boolean run = true;
 	public static int height, width, cx;
     
@@ -63,12 +64,33 @@ public class Main {
      	width = (int) screenWidth;
      	JFrame frame = new JFrame("Data");
      	JLabel label = new JLabel("Getting Password");
+     	JButton launchOptionsButton = new JButton("Set Launch Options");
      	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-     	frame.getContentPane().add(label, BorderLayout.CENTER);
-     	frame.pack();
+     	//frame.getContentPane().add(label, BorderLayout.CENTER);
+     	launchOptionsButton.setBounds(40,30,150, 30); 
+		launchOptionsButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				launchOptionsButton.setEnabled(false);
+					try {
+						writeLaunch(label);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					launchOptionsButton.setEnabled(true);
+			}   
+		});
+		label.setBounds(25,5,200,25);
+		frame.setSize(250,100);
+     	frame.add(launchOptionsButton);
+     	launchOptionsButton.setEnabled(false);
+     	frame.add(label);
+     	frame.setLayout(null);
+     	//frame.pack();
      	frame.setVisible(true);
      	showOnScreen(1,frame);
-     	getPass();
+     	getPass(label);
+     	launchOptionsButton.setEnabled(true);
      	if(isWarRunning() == true) {
          	closeWar();
          	Thread.sleep(300);
@@ -182,12 +204,12 @@ public class Main {
         	}
         	return bufferedImage;
     	}
-    	public static void detectWar() {
+    	public static void detectWar(JLabel label) {
+
     		//"HKLM\Software\WOW6432Node\Blizzard Entertainment\Warcraft III" /v InstallPath
-    		if(System.getProperty("os.name") == "Windows") {
+    		if(System.getProperty("os.name").contains("Windows")) {
 	        war3Dir = WindowsRegistry.readRegistry("HKLM\\Software\\WOW6432Node\\Blizzard Entertainment\\Warcraft III", "GamePath");
-	        System.out.println(war3Dir);
-	        if(war3Dir == null) {
+	        /*if(war3Dir == null) {
 	        	if (new File("C:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()) {
 	        		war3Dir = ("C:/Program Files (x86)/Warcraft III/Warcraft III.exe");
 	        	}
@@ -207,12 +229,14 @@ public class Main {
 	        	else if (new File("D:/Warcraft III/Warcraft III.exe").exists()){
 	        		war3Dir = ("D:/Warcraft III/Warcraft III.exe");
 	        	}
-    		}
-	        	else {
-	        		JFrame path = new JFrame("Warcraft 3 Executable Path");
-	        		war3Dir = JOptionPane.showInputDialog(path, "Please include /Warcraft III.exe");
-	        	}
+    		}*/
+
 	        }
+        	else {
+        		label.setText("Manual Warcraft Directory Input");
+        		JFrame path = new JFrame("Warcraft 3 Executable Path");
+        		war3Dir = JOptionPane.showInputDialog(path, "Path to (including) /Warcraft III.exe");
+        	}
            	 
        	}
    	 
@@ -422,15 +446,16 @@ public class Main {
             case 0:
             	return "";
             case 1:
-            	JOptionPane.showMessageDialog(null,"Warning, auto close will not currently function in native fullscreen.");
+            	JOptionPane.showMessageDialog(null,"Warning, auto close and login will not currently function in native fullscreen.");
             	return " -nativefullscr";
             case 2:
-            	JOptionPane.showMessageDialog(null,"Warning, auto close will not currently function in windowed mode.");
+            	JOptionPane.showMessageDialog(null,"Warning, auto close and login will 	not currently function in windowed mode.");
             	return " -windowed";
             }
             return "";
     }
-    	public static void writeLaunch() throws IOException {
+    	public static void writeLaunch(JLabel label) throws IOException {
+    		label.setText("Changing Launch Options");
     		String option = RadioButtonDialog();
     		File f = new File("opts.txt");
     		
@@ -447,16 +472,15 @@ public class Main {
     			}
     			else if (old.contains(" -windowed")){
     				old = old.substring(0,old.length()- 10) + option;
-    				System.out.println(old);
     				writer.write(old);
     				//fw.write(old);
     			}
     			else {
     				old = old + option;
-    				System.out.println(old);
     				writer.write(old);
     				//fw.write(old);
     			}
+    			war3Dir=old;
     			writer.close();
     		}
     	}
@@ -470,7 +494,7 @@ public class Main {
 			return key;
         	//Not public
     	}
-    	public static void getPass() throws IOException {
+    	public static void getPass(JLabel label) throws IOException {
         	
         	
         	File f = new File("opts.txt");
@@ -490,7 +514,7 @@ public class Main {
         	    }
         	    pass = new String(pwField.getPassword());
             	PrintWriter writer = new PrintWriter("opts.txt", "UTF-8");
-            	detectWar();
+            	detectWar(label);
 				writer.println(pass);
             	writer.println(war3Dir);
             	writer.close();
