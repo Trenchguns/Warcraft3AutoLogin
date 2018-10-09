@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
+import java.net.URL;
 import java.nio.file.Files;
 import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
@@ -14,13 +15,9 @@ import java.security.Key;
 import java.util.Scanner;
 import javax.crypto.Cipher;
 import org.apache.commons.io.FileUtils;
-/*
-import java.util.Map.Entry;
-import lc.kra.system.keyboard.GlobalKeyboardHook;
-import lc.kra.system.keyboard.event.GlobalKeyAdapter;
-import lc.kra.system.keyboard.event.GlobalKeyEvent;*/
-
-
+import org.jsoup.*;
+import org.jsoup.nodes.*;
+import org.jsoup.select.*;
 
 public class Main {
 	public static String pass;
@@ -30,25 +27,14 @@ public class Main {
 	public boolean ctrlPressed;
 	public boolean qPressed;
 	public static String nextgame;
-   // private static boolean run = true;
 	public static int height, width, cx;
+	public static String[] gameArray;
+	public static JFrame frame;
+	public static JTable gameTable;
+	public static Object[][] gameTableData;
     
  	public static void main(String[] args) throws Exception{
-    	/* GlobalKeyboardHook keyboardHook = new GlobalKeyboardHook(true); // use false here to switch to hook instead of raw input
-
-     	System.out.println("Global keyboard hook successfully started, press [escape] key to shutdown. Connected keyboards:");
-     	for(Entry<Long,String> keyboard:GlobalKeyboardHook.listKeyboards().entrySet())
-         	System.out.format("%d: %s\n", keyboard.getKey(), keyboard.getValue());
-    	 
-     	keyboardHook.addKeyListener(new GlobalKeyAdapter() {
-         	@Override public void keyPressed(GlobalKeyEvent event) {
-             	System.out.println(event);
-             	if(event.getVirtualKeyCode()==GlobalKeyEvent.VK_ESCAPE)
-                 	run = false;
-         	}
-         	@Override public void keyReleased(GlobalKeyEvent event) {
-             	System.out.println(event); }
-     	});*/
+ 		gameArray = new String[36];
      	double screenHeight, screenWidth;
      	Robot robot = new Robot();
      	BufferedImage endC;
@@ -62,12 +48,21 @@ public class Main {
      	screenHeight =  screenSize.getHeight();
      	height = (int) screenHeight;
      	width = (int) screenWidth;
-     	JFrame frame = new JFrame("Data");
+     	frame = new JFrame("Data");
      	JLabel label = new JLabel("Getting Password");
+     	/*
+     	JTable gameTable = new JTable(2, 36);
+     	*/
+        String[] columns = new String[] {
+                "Game Name: Lobby Count", "HotKey"
+            };
+        updateGameList();
+        gameTable = new JTable(gameTableData, columns);
+     	getGameList();
      	JButton launchOptionsButton = new JButton("Set Launch Options");
      	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
      	//frame.getContentPane().add(label, BorderLayout.CENTER);
-     	launchOptionsButton.setBounds(40,30,150, 30); 
+     	launchOptionsButton.setBounds(40,30,200, 30); 
 		launchOptionsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -80,17 +75,22 @@ public class Main {
 					launchOptionsButton.setEnabled(true);
 			}   
 		});
-		label.setBounds(25,5,200,25);
-		frame.setSize(250,100);
+		label.setBounds(75,5,300,25);
+		frame.setSize(300,650);
      	frame.add(launchOptionsButton);
      	launchOptionsButton.setEnabled(false);
      	frame.add(label);
+     	JScrollPane gameTableScroll = new JScrollPane(gameTable);
+     	gameTableScroll.setBounds(5,75,275,500);
+     	//frame.add(gameTable);
+     	frame.add(gameTableScroll);
      	frame.setLayout(null);
-     	//frame.pack();
      	frame.setVisible(true);
-     	showOnScreen(1,frame);
+     	showOnScreen(1);
      	getPass(label);
      	launchOptionsButton.setEnabled(true);
+       	//Thread.sleep(50000);
+     	Integer refreshWait = 0;
      	if(isWarRunning() == true) {
          	closeWar();
          	Thread.sleep(300);
@@ -109,6 +109,14 @@ public class Main {
                    	warLogin(robot, label);
                	}
                	Thread.sleep(500);
+               	if (refreshWait < 6) {
+                   	refreshWait++;
+               	}
+               	else {
+               		//getGameList(frame);
+               		refreshWait = 0;
+               	}
+
                	if(endCF.exists()){
            			endC = ImageIO.read(endCF);
            			endCL = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", robot, false);
@@ -121,9 +129,6 @@ public class Main {
                	}
            	}
  	}
-	 
-	 
-	 
 	 
 	 
     	public static void typeCharacter(Robot robot, String letter)
@@ -155,12 +160,12 @@ public class Main {
     	public static void pointAndColor() throws AWTException, InterruptedException {
         	Robot robot = new Robot();
         	Color color = robot.getPixelColor(494, 423);
-        	JFrame frame = new JFrame("Data");
+        	JFrame pointFrame = new JFrame("Data");
          	JLabel label = new JLabel("NULL NULL | 255 255 255");
-         	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-         	frame.getContentPane().add(label, BorderLayout.CENTER);
-         	frame.pack();
-         	frame.setVisible(true);
+         	pointFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+         	pointFrame.getContentPane().add(label, BorderLayout.CENTER);
+         	pointFrame.pack();
+         	pointFrame.setVisible(true);
          	int x= 0;
          	int y= 0;
         	while(true){
@@ -294,39 +299,8 @@ public class Main {
         	System.out.println(x);
         	return false;
     	}*/
-    	public void keyPressed(KeyEvent e) throws IOException {
-        	System.out.println("pre"+e.getKeyCode());
-
-        	if(17==e.getKeyCode())
-        	{
-            	ctrlPressed=true;
-        	}
-
-        	if(81==e.getKeyCode())
-        	{
-            	qPressed=true;
-        	}
-
-        	if(qPressed==true && ctrlPressed==true)
-        	{
-            	closeWar();
-        	}
-    	}
-
-    	public void keyReleased(KeyEvent e) {
-        	System.out.println("re"+e.getKeyChar());
-
-        	if(17==e.getKeyCode())
-        	{
-            	ctrlPressed=false;
-        	}
-
-        	if(81==e.getKeyCode())
-        	{
-            	qPressed=false;
-        	}
-    	}
-    	public static void showOnScreen( int screen, JFrame frame ) {
+ 
+    	public static void showOnScreen( int screen) {
         	GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         	GraphicsDevice[] gd = ge.getScreenDevices();
         	if( screen > -1 && screen < gd.length ) {
@@ -358,12 +332,14 @@ public class Main {
         	while(colorCheck(1, 1, 0, 0, 0, robot) !=true || colorCheck(width/2, height/2, 0, 0, 0, robot) == true) {
               	Thread.sleep(25);
           	}
-          	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, false);
+          	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, true);
+
           	cx = width - 1;
+          	System.out.println(cx);
           	while(color(shot1, cx, 0).getRed() == 0 && color(shot1, cx, 0).getGreen() == 0 && color(shot1, cx, 0).getBlue() == 0) {
               	cx--;
               	if(cx < (width - (width / 7))) {
-                  	cx = width;
+                  	cx = width-1;
               	}
           	}
           	label.setText("Waiting for menus");
@@ -398,7 +374,7 @@ public class Main {
                    	Thread.sleep(50);
                	bottomRight1 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic2", robot, false);
                	Thread.sleep(50);
-               	if(compareColors(bottomRight1, bottomRight2, 4) == true) {
+               	if(compareColors(bottomRight1, bottomRight2, 4) == false) {
                      	for(int cnt = 0; cnt < pass.length(); cnt++) {
                          	typeCharacter(robot, Character.toString(pass.charAt(cnt)));
                         	 
@@ -484,6 +460,59 @@ public class Main {
     			writer.close();
     		}
     	}
+    	public static void getGameList() throws IOException {
+    		URL url = new URL("http://www.makemehost.com/refresh/divGames-table-mmh.php");
+    		Document doc = Jsoup.parse(url, 3000);
+    		Element table = doc.select("table").get(0);
+    		Elements rows = table.select("tr");
+    		for (int i = 1; i < rows.size(); i++) {
+    		    Element row = rows.get(i);
+    		    Elements cols = row.select("td");
+    		    Element col = cols.get(3);
+    		    String colStr = col.text();
+    		    if (colStr.length() > 0) {
+        		    col = cols.get(4);
+        		    colStr = colStr + ": " + col.text();
+    		    }
+    		    gameArray[i] = colStr;
+    		    Object gameNameObj = gameArray[i];
+    		    gameTable.getModel().setValueAt(gameNameObj, i, 0);
+    		    updateGameList();
+    		}
+
+    		
+    	}
+    	public static void updateGameList() {
+            gameTableData = new Object[][] {
+                {gameArray[0], "(L)Alt+Q"},
+                {gameArray[1], "(L)Alt+w"},
+                {gameArray[2], "(L)Alt+E"},
+                {gameArray[3], "(L)Alt+R"},
+                {gameArray[4], "(L)Alt+T"},
+                {gameArray[5], "(L)Alt+Y"},
+                {gameArray[6], "(L)Alt+U"},
+                {gameArray[7], "(L)Alt+I"},
+                {gameArray[8], "(L)Alt+O"},
+                {gameArray[9], "(L)Alt+P"},
+                {gameArray[10], "(L)Alt+A"},
+                {gameArray[11], "(L)Alt+S"},
+                {gameArray[12], "(L)Alt+D"},
+                {gameArray[13], "(L)Alt+F"}, 
+                {gameArray[14], "(L)Alt+G"},
+                {gameArray[15], "(L)Alt+H"},
+                {gameArray[16], "(L)Alt+J"},
+                {gameArray[17], "(L)Alt+K"},
+                {gameArray[18], "(L)Alt+L"},
+                {gameArray[19], "(L)Alt+Z"},
+                {gameArray[20], "(L)Alt+X"},
+                {gameArray[21], "(L)Alt+C"},
+                {gameArray[22], "(L)Alt+V"},
+                {gameArray[23], "(L)Alt+B"},
+                {gameArray[24], "(L)Alt+N"},
+                {gameArray[25], "(L)Alt+M"},
+            };
+    	}
+
     	public static byte[] encrypt(String pass)
     	{
 			return null;
