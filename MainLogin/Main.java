@@ -5,19 +5,26 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.lang.reflect.Field;
+
 import java.net.URL;
 import java.nio.file.Files;
 import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.table.TableColumnModel;
+
 import java.security.Key;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.crypto.Cipher;
 import org.apache.commons.io.FileUtils;
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
 import org.jsoup.*;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
+import static java.awt.event.KeyEvent.*;
 
 public class Main {
 	public static String pass;
@@ -28,15 +35,39 @@ public class Main {
 	public boolean qPressed;
 	public static String nextgame;
 	public static int height, width, cx;
+	public static String[] gameNames;
 	public static String[] gameArray;
 	public static JFrame frame;
 	public static JTable gameTable;
 	public static Object[][] gameTableData;
+	public static String nextGame;
+	public static int nextGameInt;
+	public static Robot robot;
+	public static JLabel dataLabel;
+	public static JLabel nextGameLabel;
+	public static Boolean launching;
     
- 	public static void main(String[] args) throws Exception{
+	public static void main(String[] args) throws Exception{
+		nextGameLabel = new JLabel("Next Game: ");
+		launching = true;
+		GlobalKeyListener.alt = false;
+ 		nextGameInt = -1;
+		try {
+			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+			logger.setLevel(Level.WARNING);
+			logger.setUseParentHandlers(false);
+			GlobalScreen.registerNativeHook();
+		}
+		catch (NativeHookException ex) {
+			System.err.println("There was a problem registering the native hook.");
+			System.err.println(ex.getMessage());
+			System.exit(1);
+		}
+ 		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
+ 		gameNames = new String[36];
  		gameArray = new String[36];
      	double screenHeight, screenWidth;
-     	Robot robot = new Robot();
+     	robot = new Robot();
      	BufferedImage endC;
      	BufferedImage endCL;
      	File endCF =new File("endC.png");
@@ -49,7 +80,7 @@ public class Main {
      	height = (int) screenHeight;
      	width = (int) screenWidth;
      	frame = new JFrame("Data");
-     	JLabel label = new JLabel("Getting Password");
+     	dataLabel = new JLabel("Getting Password");
      	/*
      	JTable gameTable = new JTable(2, 36);
      	*/
@@ -58,62 +89,66 @@ public class Main {
             };
         updateGameList();
         gameTable = new JTable(gameTableData, columns);
-     	getGameList();
+     	getmmhGameList();
      	JButton launchOptionsButton = new JButton("Set Launch Options");
      	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
      	//frame.getContentPane().add(label, BorderLayout.CENTER);
-     	launchOptionsButton.setBounds(40,30,200, 30); 
+     	launchOptionsButton.setBounds(40,45,200, 30); 
 		launchOptionsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				launchOptionsButton.setEnabled(false);
 					try {
-						writeLaunch(label);
+						writeLaunch();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 					launchOptionsButton.setEnabled(true);
 			}   
 		});
-		label.setBounds(75,5,300,25);
-		frame.setSize(300,650);
+		dataLabel.setBounds(75,5,400,25);
+		nextGameLabel.setBounds(75,20,400,30);
+		frame.setSize(300,725);
      	frame.add(launchOptionsButton);
+     	frame.add(nextGameLabel);
      	launchOptionsButton.setEnabled(false);
-     	frame.add(label);
+     	frame.add(dataLabel);
+     	TableColumnModel columnModel = gameTable.getColumnModel();
+     	columnModel.getColumn(0).setPreferredWidth(200);
+     	columnModel.getColumn(1).setPreferredWidth(75);
      	JScrollPane gameTableScroll = new JScrollPane(gameTable);
-     	gameTableScroll.setBounds(5,75,275,500);
-     	//frame.add(gameTable);
+     	gameTableScroll.setBounds(5,80,275,599);
      	frame.add(gameTableScroll);
      	frame.setLayout(null);
      	frame.setVisible(true);
      	showOnScreen(1);
-     	getPass(label);
+     	getPass();
      	launchOptionsButton.setEnabled(true);
-       	//Thread.sleep(50000);
      	Integer refreshWait = 0;
-     	if(isWarRunning() == true) {
-         	closeWar();
-         	Thread.sleep(300);
-         	runWar();
-         	warLogin(robot, label);
+     	if(isWarRunning() == true && process == null) {
+         	relaunchWar();
      	}
      	else {
          	runWar();
-         	warLogin(robot, label);
+         	warLogin();
      	}
-           	label.setText("Logged In");
+     	dataLabel.setText("Logged In");
 
            	while(true) {
                	if(isWarRunning() == false) {
                    	runWar();
-                   	warLogin(robot, label);
+                   	warLogin();
                	}
                	Thread.sleep(500);
-               	if (refreshWait < 6) {
+               	if (refreshWait < 12) {
                    	refreshWait++;
+                   	if(refreshWait%2 == 0) {
+                   	dataLabel.setText("Games Refresh in: " + Integer.toString(6 - refreshWait/2));
+                   	}
                	}
                	else {
-               		//getGameList(frame);
+               		dataLabel.setText("Games Refreshed");
+               		getmmhGameList();
                		refreshWait = 0;
                	}
 
@@ -121,20 +156,131 @@ public class Main {
            			endC = ImageIO.read(endCF);
            			endCL = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", robot, false);
            			if(compareColors(endCL, endC, 1)) {
-           				closeWar();
-           				Thread.sleep(200);
-           				runWar();
-           				warLogin(robot, label);
+           				relaunchWar();
            			}
                	}
            	}
  	}
 	 
-	 
-    	public static void typeCharacter(Robot robot, String letter)
+	 private static void doType(int... keyCodes) {
+	        doType(keyCodes, 0, keyCodes.length);
+	    }
+
+	    private static void doType(int[] keyCodes, int offset, int length) {
+	        if (length == 0) {
+	            return;
+	        }
+
+	        robot.keyPress(keyCodes[offset]);
+	        doType(keyCodes, offset + 1, length - 1);
+	        robot.keyRelease(keyCodes[offset]);
+	    }
+    	public static void typeCharacter(String letter)
     	{
         	try
         	{
+        		char character = letter.charAt(0);
+        		switch (character) {
+        		case 'a': doType(VK_A); break;
+                case 'b': doType(VK_B); break;
+                case 'c': doType(VK_C); break;
+                case 'd': doType(VK_D); break;
+                case 'e': doType(VK_E); break;
+                case 'f': doType(VK_F); break;
+                case 'g': doType(VK_G); break;
+                case 'h': doType(VK_H); break;
+                case 'i': doType(VK_I); break;
+                case 'j': doType(VK_J); break;
+                case 'k': doType(VK_K); break;
+                case 'l': doType(VK_L); break;
+                case 'm': doType(VK_M); break;
+                case 'n': doType(VK_N); break;
+                case 'o': doType(VK_O); break;
+                case 'p': doType(VK_P); break;
+                case 'q': doType(VK_Q); break;
+                case 'r': doType(VK_R); break;
+                case 's': doType(VK_S); break;
+                case 't': doType(VK_T); break;
+                case 'u': doType(VK_U); break;
+                case 'v': doType(VK_V); break;
+                case 'w': doType(VK_W); break;
+                case 'x': doType(VK_X); break;
+                case 'y': doType(VK_Y); break;
+                case 'z': doType(VK_Z); break;
+                case 'A': doType(VK_SHIFT, VK_A); break;
+                case 'B': doType(VK_SHIFT, VK_B); break;
+                case 'C': doType(VK_SHIFT, VK_C); break;
+                case 'D': doType(VK_SHIFT, VK_D); break;
+                case 'E': doType(VK_SHIFT, VK_E); break;
+                case 'F': doType(VK_SHIFT, VK_F); break;
+                case 'G': doType(VK_SHIFT, VK_G); break;
+                case 'H': doType(VK_SHIFT, VK_H); break;
+                case 'I': doType(VK_SHIFT, VK_I); break;
+                case 'J': doType(VK_SHIFT, VK_J); break;
+                case 'K': doType(VK_SHIFT, VK_K); break;
+                case 'L': doType(VK_SHIFT, VK_L); break;
+                case 'M': doType(VK_SHIFT, VK_M); break;
+                case 'N': doType(VK_SHIFT, VK_N); break;
+                case 'O': doType(VK_SHIFT, VK_O); break;
+                case 'P': doType(VK_SHIFT, VK_P); break;
+                case 'Q': doType(VK_SHIFT, VK_Q); break;
+                case 'R': doType(VK_SHIFT, VK_R); break;
+                case 'S': doType(VK_SHIFT, VK_S); break;
+                case 'T': doType(VK_SHIFT, VK_T); break;
+                case 'U': doType(VK_SHIFT, VK_U); break;
+                case 'V': doType(VK_SHIFT, VK_V); break;
+                case 'W': doType(VK_SHIFT, VK_W); break;
+                case 'X': doType(VK_SHIFT, VK_X); break;
+                case 'Y': doType(VK_SHIFT, VK_Y); break;
+                case 'Z': doType(VK_SHIFT, VK_Z); break;
+                case '`': doType(VK_BACK_QUOTE); break;
+                case '0': doType(VK_0); break;
+                case '1': doType(VK_1); break;
+                case '2': doType(VK_2); break;
+                case '3': doType(VK_3); break;
+                case '4': doType(VK_4); break;
+                case '5': doType(VK_5); break;
+                case '6': doType(VK_6); break;
+                case '7': doType(VK_7); break;
+                case '8': doType(VK_8); break;
+                case '9': doType(VK_9); break;
+                case '-': doType(VK_MINUS); break;
+                case '=': doType(VK_EQUALS); break;
+                case '~': doType(VK_SHIFT, VK_BACK_QUOTE); break;
+                case '!': doType(VK_SHIFT, VK_1); break;
+                case '@': doType(VK_AT); break;
+                case '#': doType(VK_NUMBER_SIGN); break;
+                case '$': doType(VK_DOLLAR); break;
+                case '%': doType(VK_SHIFT, VK_5); break;
+                case '^': doType(VK_CIRCUMFLEX); break;
+                case '&': doType(VK_AMPERSAND); break;
+                case '*': doType(VK_ASTERISK); break;
+                case '(': doType(VK_LEFT_PARENTHESIS); break;
+                case ')': doType(VK_RIGHT_PARENTHESIS); break;
+                case '_': doType(VK_UNDERSCORE); break;
+                case '+': doType(VK_SHIFT, VK_EQUALS); break;
+                case '\t': doType(VK_TAB); break;
+                case '\n': doType(VK_ENTER); break;
+                case '[': doType(VK_OPEN_BRACKET); break;
+                case ']': doType(VK_CLOSE_BRACKET); break;
+                case '\\': doType(VK_BACK_SLASH); break;
+                case '{': doType(VK_SHIFT, VK_OPEN_BRACKET); break;
+                case '}': doType(VK_SHIFT, VK_CLOSE_BRACKET); break;
+                case '|': doType(VK_SHIFT, VK_BACK_SLASH); break;
+                case ';': doType(VK_SEMICOLON); break;
+                case ':': doType(VK_COLON); break;
+                case '\'': doType(VK_QUOTE); break;
+                case '"': doType(VK_QUOTEDBL); break;
+                case ',': doType(VK_COMMA); break;
+                case '<': doType(VK_SHIFT, VK_COMMA); break;
+                case '.': doType(VK_PERIOD); break;
+                case '>': doType(VK_SHIFT, VK_PERIOD); break;
+                case '/': doType(VK_SLASH); break;
+                case '?': doType(VK_SHIFT, VK_SLASH); break;
+                case ' ': doType(VK_SPACE); break;
+                default:
+                    throw new IllegalArgumentException("Cannot type character " + character);
+                }/*
             	boolean upperCase = Character.isUpperCase( letter.charAt(0) );
             	String variableName = "VK_" + letter.toUpperCase();
     
@@ -142,15 +288,13 @@ public class Main {
             	Class<? extends KeyEvent> clazz = ke.getClass();
             	Field field = clazz.getField( variableName );
             	int keyCode = field.getInt(ke);
-    
-            	//robot.delay(20);
-    
+
             	if (upperCase) robot.keyPress( KeyEvent.VK_SHIFT );
     
             	robot.keyPress( keyCode );
             	robot.keyRelease( keyCode );
     
-            	if (upperCase) robot.keyRelease( KeyEvent.VK_SHIFT );
+            	if (upperCase) robot.keyRelease( KeyEvent.VK_SHIFT );*/
         	}
         	catch(Exception e)
         	{
@@ -161,9 +305,9 @@ public class Main {
         	Robot robot = new Robot();
         	Color color = robot.getPixelColor(494, 423);
         	JFrame pointFrame = new JFrame("Data");
-         	JLabel label = new JLabel("NULL NULL | 255 255 255");
+         	JLabel pointLabel = new JLabel("NULL NULL | 255 255 255");
          	pointFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-         	pointFrame.getContentPane().add(label, BorderLayout.CENTER);
+         	pointFrame.getContentPane().add(pointLabel, BorderLayout.CENTER);
          	pointFrame.pack();
          	pointFrame.setVisible(true);
          	int x= 0;
@@ -178,7 +322,7 @@ public class Main {
             	color = robot.getPixelColor(x, y);
             	String coords = x + " " + y + " | " + color.getRed() + " " + color.getGreen() + " " + color.getBlue();
             	//String coords2 = y + " " + x + " " + returnColor(y,x);
-            	label.setText(coords);
+            	pointLabel.setText(coords);
             	}
         	}
        	 
@@ -209,7 +353,7 @@ public class Main {
         	}
         	return bufferedImage;
     	}
-    	public static void detectWar(JLabel label) {
+    	public static void detectWar() {
 
     		//"HKLM\Software\WOW6432Node\Blizzard Entertainment\Warcraft III" /v InstallPath
     		if(System.getProperty("os.name").contains("Windows")) {
@@ -238,7 +382,7 @@ public class Main {
 
 	        }
         	else {
-        		label.setText("Manual Warcraft Directory Input");
+        		dataLabel.setText("Manual Warcraft Directory Input");
         		JFrame path = new JFrame("Warcraft 3 Executable Path");
         		war3Dir = JOptionPane.showInputDialog(path, "Path to (including) /Warcraft III.exe");
         	}
@@ -262,7 +406,7 @@ public class Main {
             	process.destroy();
         	}
         	String process = "Warcraft III.exe";
-        	Runtime.getRuntime().exec("taskkill /F /IM " + process);
+        	Runtime.getRuntime().exec("taskkill /F /IM " + '"' +process + '"');
        	 
     	}
     	public static boolean compareColors(BufferedImage im1, BufferedImage im2, int accuracy) {
@@ -283,6 +427,12 @@ public class Main {
             	return false;
         	}
         	return true;
+    	}
+    	public static void relaunchWar() throws IOException, InterruptedException, AWTException {
+    		closeWar();
+    		Thread.sleep(300);
+    		runWar();
+    		warLogin();
     	}
     	public static String returnColor(int x, int y) throws AWTException {
         	Robot robot = new Robot();
@@ -327,36 +477,40 @@ public class Main {
         	}
            	return false;
     	}
-    	public static void warLogin(Robot robot, JLabel label) throws AWTException, IOException, InterruptedException {
-          	label.setText("Waiting for launch");
-        	while(colorCheck(1, 1, 0, 0, 0, robot) !=true || colorCheck(width/2, height/2, 0, 0, 0, robot) == true) {
-              	Thread.sleep(25);
-          	}
-          	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, true);
-
+    	public static void warLogin() throws AWTException, IOException, InterruptedException {
+    		robot.mouseMove(0, height-1);
+    		dataLabel.setText("Waiting for launch");
           	cx = width - 1;
-          	System.out.println(cx);
+          	while (colorCheck(1, 1, 0, 0, 0, robot) !=true && (colorCheck(width/2, height/2, 0, 0, 0, robot) == false || colorCheck(width/2, height/2, 255, 255, 255, robot) == false) && colorCheck(cx, 1, 0, 0, 0, robot) !=true) {
+          		//Wait for screen to fully blacken, and maybe that weird white box to pop up in middle
+          	}
+          	Thread.sleep(50);
+          	Color color = robot.getPixelColor(width/2, height/2);
+          	// && colorCheck(1, 1, 0, 0, 0, robot) !=true && colorCheck(width/2, height/2, 0, 0, 0, robot) == false && colorCheck(cx, 1, 0, 0, 0, robot) !=true
+        	while(color.getBlue() < 100 || color.getBlue() == 255) { //Wait until the top left is black or the middle is not black
+        		Thread.sleep(25);
+        		color = robot.getPixelColor(width/2, height/2);
+
+          	}
+          	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, false);
+
           	while(color(shot1, cx, 0).getRed() == 0 && color(shot1, cx, 0).getGreen() == 0 && color(shot1, cx, 0).getBlue() == 0) {
               	cx--;
               	if(cx < (width - (width / 7))) {
                   	cx = width-1;
               	}
           	}
-          	label.setText("Waiting for menus");
+          	dataLabel.setText("Waiting for menus");
           	BufferedImage bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
           	Thread.sleep(200);
           	BufferedImage bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);;
           	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
               	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
-              	Thread.sleep(200);
+              	Thread.sleep(300);
               	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
           	}
-          	Thread.sleep(100);
-          	label.setText("Opening Battle.net");
-          	for(int x = 0; x < 20; x++) {
-              	Thread.sleep(50);
+          	dataLabel.setText("Opening Battle.net");
               	robot.keyPress(KeyEvent.VK_B);
-          	}
                	bottomRight1 = image((width - cx) / 2 - ((width - cx) / 15), (width - cx) / 2 - ((width - cx) / 10), width - cx + ((width - cx) / 20), height / 3 - height / 30, "testpic", robot, false);
                	while(checkWhite(bottomRight1) == false) {
                    	Thread.sleep(50);
@@ -364,23 +518,54 @@ public class Main {
                	}
                	Thread.sleep(100);
                	bottomRight2 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic", robot, false);
-               	label.setText("Logging In");
-
+               	dataLabel.setText("Logging In");
+               	Thread.sleep(200);
                    	for(int cnt = 0; cnt < pass.length(); cnt++) {
-                       	typeCharacter(robot, Character.toString(pass.charAt(cnt)));
+                       	typeCharacter(Character.toString(pass.charAt(cnt)));
                       	 
                    	}
+                   	Thread.sleep(100);
                    	robot.keyPress(KeyEvent.VK_ENTER);
-                   	Thread.sleep(50);
+                   	Thread.sleep(250);
                	bottomRight1 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic2", robot, false);
-               	Thread.sleep(50);
                	if(compareColors(bottomRight1, bottomRight2, 4) == false) {
                      	for(int cnt = 0; cnt < pass.length(); cnt++) {
-                         	typeCharacter(robot, Character.toString(pass.charAt(cnt)));
+                         	typeCharacter(Character.toString(pass.charAt(cnt)));
                         	 
                      	}
                      	robot.keyPress(KeyEvent.VK_ENTER);
           	}
+               	Thread.sleep(1250);
+              	launching = false;
+               	dataLabel.setText("Waiting for Menus");
+              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	Thread.sleep(200);
+              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+              	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
+                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+                  	Thread.sleep(100);
+                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	}
+              	Thread.sleep(50);
+              	robot.keyPress(KeyEvent.VK_G);
+               	Thread.sleep(200);
+               	dataLabel.setText("Waiting for Game Name Input");
+              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	Thread.sleep(200);
+              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+              	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
+                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+                  	Thread.sleep(100);
+                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	}
+              	if((Integer) nextGameInt >= 0){
+              		for(int cnt = 0; cnt < gameNames[(Integer) nextGameInt].length(); cnt++) {
+              			typeCharacter(Character.toString(gameArray[(Integer) nextGameInt].charAt(cnt)));
+                  	 
+               		}
+                  	robot.keyPress(KeyEvent.VK_ENTER);
+              	}
+
     	}
     	public static void endC(Robot robot) {
    		 JFrame f=new JFrame("Grab End Screen");       	 
@@ -416,7 +601,7 @@ public class Main {
             int result = JOptionPane.showConfirmDialog(null, myPanel,
                     "Launch Options", JOptionPane.OK_CANCEL_OPTION);
             if (result == JOptionPane.OK_OPTION) {
-                System.out.println("Field 1: " + b1.getSelectedIndex());
+                //System.out.println("Field 1: " + b1.getSelectedIndex());
             }
             switch(b1.getSelectedIndex()) {
             case 0:
@@ -430,8 +615,8 @@ public class Main {
             }
             return "";
     }
-    	public static void writeLaunch(JLabel label) throws IOException {
-    		label.setText("Changing Launch Options");
+    	public static void writeLaunch() throws IOException {
+    		dataLabel.setText("Changing Launch Options");
     		String option = RadioButtonDialog();
     		File f = new File("opts.txt");
     		
@@ -442,7 +627,6 @@ public class Main {
     			FileWriter writer = new FileWriter(f, false);
     			if (old.contains(" -nativefullscr")){
     				old = old.substring(0,old.length()- 15) + option;
-    				System.out.println(old);
     				writer.write(old);
     				//fw.write(old);
     			}
@@ -460,9 +644,9 @@ public class Main {
     			writer.close();
     		}
     	}
-    	public static void getGameList() throws IOException {
-    		URL url = new URL("http://www.makemehost.com/refresh/divGames-table-mmh.php");
-    		Document doc = Jsoup.parse(url, 3000);
+    	public static void getmmhGameList() throws IOException {
+    		URL mmh = new URL("http://www.makemehost.com/refresh/divGames-table-mmh.php");
+    		Document doc = Jsoup.parse(mmh, 3000);
     		Element table = doc.select("table").get(0);
     		Elements rows = table.select("tr");
     		for (int i = 1; i < rows.size(); i++) {
@@ -472,12 +656,13 @@ public class Main {
     		    String colStr = col.text();
     		    if (colStr.length() > 0) {
         		    col = cols.get(4);
+        		    gameNames[i-1] = colStr;
         		    colStr = colStr + ": " + col.text();
     		    }
-    		    gameArray[i] = colStr;
-    		    Object gameNameObj = gameArray[i];
-    		    gameTable.getModel().setValueAt(gameNameObj, i, 0);
-    		    updateGameList();
+    		    gameArray[i-1] = colStr;
+    		    Object gameNameObj = gameArray[i-1];
+    		    gameTable.getModel().setValueAt(gameNameObj, i-1, 0);
+    		    //updateGameList();
     		}
 
     		
@@ -509,7 +694,18 @@ public class Main {
                 {gameArray[22], "(L)Alt+V"},
                 {gameArray[23], "(L)Alt+B"},
                 {gameArray[24], "(L)Alt+N"},
-                {gameArray[25], "(L)Alt+M"},
+                {gameArray[25], "(L)Alt+1"},
+                {gameArray[26], "(L)Alt+2"},
+                {gameArray[27], "(L)Alt+3"},
+                {gameArray[28], "(L)Alt+4"},
+                {gameArray[29], "(L)Alt+5"},
+                {gameArray[30], "(L)Alt+6"},
+                {gameArray[31], "(L)Alt+7"},
+                {gameArray[32], "(L)Alt+8"},
+                {gameArray[33], "(L)Alt+9"},
+                {gameArray[34], "(L)Alt+0"},
+                {gameArray[35], "(L)Alt+-"},
+                
             };
     	}
 
