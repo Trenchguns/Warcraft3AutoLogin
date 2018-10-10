@@ -77,11 +77,10 @@ public class Main {
      	robot = new Robot();
      	BufferedImage endC;
      	BufferedImage endCL;
-     	File endCF =new File("endC.png");
+     	File endCF =new File("BNetAuto Folder/endC.png");
      	if(!endCF.exists()){
    		  endC();
      	}
-     	Thread.sleep(5000);
      	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
      	screenWidth = screenSize.getWidth();
      	screenHeight =  screenSize.getHeight();
