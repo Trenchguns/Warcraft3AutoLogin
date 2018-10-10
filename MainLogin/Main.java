@@ -33,13 +33,13 @@ public class Main {
 	public static String war3Dir;
 	public boolean ctrlPressed;
 	public boolean qPressed;
-	public static String nextgame;
 	public static int height, width, cx;
 	public static String[] gameNames;
 	public static String[] gameArray;
 	public static JFrame frame;
-	public static JTable gameTable;
-	public static Object[][] gameTableData;
+	public static JTable[] gameTable;
+	public static Object[][] gameTableData1;
+	public static Object[][] gameTableData2;
 	public static String nextGame;
 	public static int nextGameInt;
 	public static Robot robot;
@@ -48,9 +48,13 @@ public class Main {
 	public static Boolean launching;
     
 	public static void main(String[] args) throws Exception{
+		File dir = new File("BNetAuto Folder");
+		gameTable = new JTable[2];
+		dir.mkdir();
 		nextGameLabel = new JLabel("Next Game: ");
 		launching = true;
-		GlobalKeyListener.alt = false;
+		GlobalKeyListener.rAlt = false;
+		GlobalKeyListener.lAlt = false;
  		nextGameInt = -1;
 		try {
 			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
@@ -64,8 +68,8 @@ public class Main {
 			System.exit(1);
 		}
  		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
- 		gameNames = new String[36];
- 		gameArray = new String[36];
+ 		gameNames = new String[81];
+ 		gameArray = new String[81];
      	double screenHeight, screenWidth;
      	robot = new Robot();
      	BufferedImage endC;
@@ -87,9 +91,12 @@ public class Main {
         String[] columns = new String[] {
                 "Game Name: Lobby Count", "HotKey"
             };
-        updateGameList();
-        gameTable = new JTable(gameTableData, columns);
-     	getmmhGameList();
+        updateMmhGameList();
+        updateEntGameList();
+        gameTable[0] = new JTable(gameTableData1, columns);
+        gameTable[1] = new JTable(gameTableData2, columns);
+        getMmhGameList();
+        getEntGameList();
      	JButton launchOptionsButton = new JButton("Set Launch Options");
      	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
      	//frame.getContentPane().add(label, BorderLayout.CENTER);
@@ -108,17 +115,23 @@ public class Main {
 		});
 		dataLabel.setBounds(75,5,400,25);
 		nextGameLabel.setBounds(75,20,400,30);
-		frame.setSize(300,725);
+		frame.setSize(600,862);
      	frame.add(launchOptionsButton);
      	frame.add(nextGameLabel);
      	launchOptionsButton.setEnabled(false);
      	frame.add(dataLabel);
-     	TableColumnModel columnModel = gameTable.getColumnModel();
-     	columnModel.getColumn(0).setPreferredWidth(200);
-     	columnModel.getColumn(1).setPreferredWidth(75);
-     	JScrollPane gameTableScroll = new JScrollPane(gameTable);
-     	gameTableScroll.setBounds(5,80,275,599);
-     	frame.add(gameTableScroll);
+     	TableColumnModel columnModel1 = gameTable[0].getColumnModel();
+     	columnModel1.getColumn(0).setPreferredWidth(200);
+     	columnModel1.getColumn(1).setPreferredWidth(75);
+     	TableColumnModel columnModel2 = gameTable[1].getColumnModel();
+     	columnModel2.getColumn(0).setPreferredWidth(200);
+     	columnModel2.getColumn(1).setPreferredWidth(75);
+     	JScrollPane gameTable1Scroll = new JScrollPane(gameTable[0]);
+     	JScrollPane gameTable2Scroll = new JScrollPane(gameTable[1]);
+     	gameTable1Scroll.setBounds(5,80,275,599);
+     	frame.add(gameTable1Scroll);
+     	gameTable2Scroll.setBounds(290,80,275,743);
+     	frame.add(gameTable2Scroll);
      	frame.setLayout(null);
      	frame.setVisible(true);
      	showOnScreen(1);
@@ -148,7 +161,7 @@ public class Main {
                	}
                	else {
                		dataLabel.setText("Games Refreshed");
-               		getmmhGameList();
+               		getMmhGameList();
                		refreshWait = 0;
                	}
 
@@ -248,15 +261,15 @@ public class Main {
                 case '=': doType(VK_EQUALS); break;
                 case '~': doType(VK_SHIFT, VK_BACK_QUOTE); break;
                 case '!': doType(VK_SHIFT, VK_1); break;
-                case '@': doType(VK_AT); break;
-                case '#': doType(VK_NUMBER_SIGN); break;
-                case '$': doType(VK_DOLLAR); break;
+                case '@': doType(VK_SHIFT, VK_2); break;
+                case '#': doType(VK_SHIFT, VK_3); break;
+                case '$': doType(VK_SHIFT, VK_4); break;
                 case '%': doType(VK_SHIFT, VK_5); break;
-                case '^': doType(VK_CIRCUMFLEX); break;
-                case '&': doType(VK_AMPERSAND); break;
-                case '*': doType(VK_ASTERISK); break;
-                case '(': doType(VK_LEFT_PARENTHESIS); break;
-                case ')': doType(VK_RIGHT_PARENTHESIS); break;
+                case '^': doType(VK_SHIFT, VK_6); break;
+                case '&': doType(VK_SHIFT, VK_7); break;
+                case '*': doType(VK_SHIFT, VK_8); break;
+                case '(': doType(VK_SHIFT, VK_9); break;
+                case ')': doType(VK_SHIFT, VK_0); break;
                 case '_': doType(VK_UNDERSCORE); break;
                 case '+': doType(VK_SHIFT, VK_EQUALS); break;
                 case '\t': doType(VK_TAB); break;
@@ -348,7 +361,7 @@ public class Main {
     	public static BufferedImage image(int x, int y, int xx, int yy, String name, Robot robot, boolean save) throws IOException {
         	BufferedImage bufferedImage = robot.createScreenCapture(new Rectangle(xx,yy,x,y));
         	if(save == true) {
-            	File imageFile = new File(name+ ".png");
+            	File imageFile = new File("BNetAuto Folder/" + name+ ".png");
             	ImageIO.write(bufferedImage, "png", imageFile);
         	}
         	return bufferedImage;
@@ -358,28 +371,6 @@ public class Main {
     		//"HKLM\Software\WOW6432Node\Blizzard Entertainment\Warcraft III" /v InstallPath
     		if(System.getProperty("os.name").contains("Windows")) {
 	        war3Dir = WindowsRegistry.readRegistry("HKLM\\Software\\WOW6432Node\\Blizzard Entertainment\\Warcraft III", "GamePath");
-	        /*if(war3Dir == null) {
-	        	if (new File("C:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()) {
-	        		war3Dir = ("C:/Program Files (x86)/Warcraft III/Warcraft III.exe");
-	        	}
-	        	else if (new File("D:/Program Files (x86)/Warcraft III/Warcraft III.exe").exists()){
-	        		
-	        		war3Dir = ("D:/Program Files (x86)/Warcraft III/Warcraft III.exe");
-	        	}
-	        	else if (new File("D:/Program Files/Warcraft III/Warcraft III.exe").exists()){
-	        		war3Dir = ("D:/Program Files/Warcraft III/Warcraft III.exe");
-	        	}
-	        	else if (new File("C:/Program Files/Warcraft III/Warcraft III.exe").exists()){
-                	war3Dir = ("C:/Program Files/Warcraft III/Warcraft III.exe");
-	        	}
-	        	else if (new File("C:/Warcraft III/Warcraft III.exe").exists()){
-	        		war3Dir = ("C:/Warcraft III/Warcraft III.exe");
-	        	}
-	        	else if (new File("D:/Warcraft III/Warcraft III.exe").exists()){
-	        		war3Dir = ("D:/Warcraft III/Warcraft III.exe");
-	        	}
-    		}*/
-
 	        }
         	else {
         		dataLabel.setText("Manual Warcraft Directory Input");
@@ -558,7 +549,7 @@ public class Main {
                   	Thread.sleep(100);
                   	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
               	}
-              	if((Integer) nextGameInt >= 0){
+              	if((Integer) nextGameInt >= 0 && gameNames[(Integer) nextGameInt].length() >= 0){
               		for(int cnt = 0; cnt < gameNames[(Integer) nextGameInt].length(); cnt++) {
               			typeCharacter(Character.toString(gameArray[(Integer) nextGameInt].charAt(cnt)));
                   	 
@@ -644,7 +635,7 @@ public class Main {
     			writer.close();
     		}
     	}
-    	public static void getmmhGameList() throws IOException {
+    	public static void getMmhGameList() throws IOException {
     		URL mmh = new URL("http://www.makemehost.com/refresh/divGames-table-mmh.php");
     		Document doc = Jsoup.parse(mmh, 3000);
     		Element table = doc.select("table").get(0);
@@ -661,14 +652,37 @@ public class Main {
     		    }
     		    gameArray[i-1] = colStr;
     		    Object gameNameObj = gameArray[i-1];
-    		    gameTable.getModel().setValueAt(gameNameObj, i-1, 0);
+    		    gameTable[0].getModel().setValueAt(gameNameObj, i-1, 0);
     		    //updateGameList();
     		}
 
     		
     	}
-    	public static void updateGameList() {
-            gameTableData = new Object[][] {
+    	public static void getEntGameList() throws IOException, InterruptedException {
+    		URL ent = new URL("http://www.makemehost.com/refresh/divGames-table-ent.php");
+    		Document doc = Jsoup.parse(ent, 3000);
+    		Element table = doc.select("table").get(0);
+    		Elements rows = table.select("tr");
+    		for (int i = 2; i < rows.size(); i++) {
+    		    Element row = rows.get(i);
+    		    Elements cols = row.select("td");
+    		    Element col = cols.get(1);
+    		    String colStr = col.text();
+    		    if (colStr.length() > 0) {
+        		    col = cols.get(2);
+        		    gameNames[i+34] = colStr;
+        		    colStr = colStr + ": " + col.text();
+    		    }
+    		    gameArray[i+34] = colStr;
+    		    Object gameNameObj = gameArray[i+34];
+    		    gameTable[1].getModel().setValueAt(gameNameObj, i-2, 0);
+    		    //updateGameList();
+    		}
+
+    		
+    	}
+    	public static void updateMmhGameList() {
+            gameTableData1 = new Object[][] {
                 {gameArray[0], "(L)Alt+Q"},
                 {gameArray[1], "(L)Alt+w"},
                 {gameArray[2], "(L)Alt+E"},
@@ -694,21 +708,70 @@ public class Main {
                 {gameArray[22], "(L)Alt+V"},
                 {gameArray[23], "(L)Alt+B"},
                 {gameArray[24], "(L)Alt+N"},
-                {gameArray[25], "(L)Alt+1"},
-                {gameArray[26], "(L)Alt+2"},
-                {gameArray[27], "(L)Alt+3"},
-                {gameArray[28], "(L)Alt+4"},
-                {gameArray[29], "(L)Alt+5"},
-                {gameArray[30], "(L)Alt+6"},
-                {gameArray[31], "(L)Alt+7"},
-                {gameArray[32], "(L)Alt+8"},
-                {gameArray[33], "(L)Alt+9"},
-                {gameArray[34], "(L)Alt+0"},
-                {gameArray[35], "(L)Alt+-"},
+                {gameArray[25], "(L)Alt+M"},
+                {gameArray[26], "(L)Alt+1"},
+                {gameArray[27], "(L)Alt+2"},
+                {gameArray[28], "(L)Alt+3"},
+                {gameArray[29], "(L)Alt+4"},
+                {gameArray[30], "(L)Alt+5"},
+                {gameArray[31], "(L)Alt+6"},
+                {gameArray[32], "(L)Alt+7"},
+                {gameArray[33], "(L)Alt+8"},
+                {gameArray[34], "(L)Alt+9"},
+                {gameArray[35], "(L)Alt+0"},
                 
             };
     	}
-
+    	public static void updateEntGameList() {
+            gameTableData2 = new Object[][] {
+    	{gameArray[36], "(R)Alt+Q"},
+        {gameArray[37], "(R)Alt+W"},
+        {gameArray[38], "(R)Alt+E"},
+        {gameArray[39], "(R)Alt+R"},
+        {gameArray[40], "(R)Alt+T"},
+        {gameArray[41], "(R)Alt+Y"},
+        {gameArray[42], "(R)Alt+U"},
+        {gameArray[43], "(R)Alt+I"},
+        {gameArray[44], "(R)Alt+O"},
+        {gameArray[45], "(R)Alt+P"},
+        {gameArray[46], "(R)Alt+A"},
+        {gameArray[47], "(R)Alt+S"},
+        {gameArray[48], "(R)Alt+D"},
+        {gameArray[49], "(R)Alt+F"}, 
+        {gameArray[50], "(R)Alt+G"},
+        {gameArray[51], "(R)Alt+H"},
+        {gameArray[52], "(R)Alt+J"},
+        {gameArray[53], "(R)Alt+K"},
+        {gameArray[54], "(R)Alt+L"},
+        {gameArray[55], "(R)Alt+Z"},
+        {gameArray[56], "(R)Alt+X"},
+        {gameArray[57], "(R)Alt+C"},
+        {gameArray[58], "(R)Alt+V"},
+        {gameArray[59], "(R)Alt+B"},
+        {gameArray[60], "(R)Alt+N"},
+        {gameArray[61], "(R)Alt+M"},
+        {gameArray[62], "(R)Alt+1"},
+        {gameArray[63], "(R)Alt+2"},
+        {gameArray[64], "(R)Alt+3"},
+        {gameArray[65], "(R)Alt+4"},
+        {gameArray[66], "(R)Alt+5"},
+        {gameArray[67], "(R)Alt+6"},
+        {gameArray[68], "(R)Alt+7"},
+        {gameArray[69], "(R)Alt+8"},
+        {gameArray[70], "(R)Alt+9"},
+        {gameArray[71], "(R)Alt+0"},
+        {gameArray[72], "(R)Alt+-"},
+        {gameArray[73], "(R)Alt+="},
+        {gameArray[74], "(R)Alt+["},
+        {gameArray[75], "(R)Alt+]"},
+        {gameArray[76], "(R)Alt+;"},
+        {gameArray[77], "(R)Alt+'"},
+        {gameArray[78], "(R)Alt+,"},
+        {gameArray[79], "(R)Alt+."},
+        {gameArray[80], "(R)Alt+/"},
+            };
+    	}
+        
     	public static byte[] encrypt(String pass)
     	{
 			return null;
