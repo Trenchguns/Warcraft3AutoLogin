@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.TableColumnModel;
 
 import java.security.Key;
@@ -50,7 +51,9 @@ public class Main {
 	public static void main(String[] args) throws Exception{
 		File dir = new File("BNetAuto Folder");
 		gameTable = new JTable[2];
-		dir.mkdir();
+		if(!dir.exists()) {
+			dir.mkdir();
+		}
 		nextGameLabel = new JLabel("Next Game: ");
 		launching = true;
 		GlobalKeyListener.rAlt = false;
@@ -76,8 +79,9 @@ public class Main {
      	BufferedImage endCL;
      	File endCF =new File("endC.png");
      	if(!endCF.exists()){
-   		  endC(robot);
+   		  endC();
      	}
+     	Thread.sleep(5000);
      	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
      	screenWidth = screenSize.getWidth();
      	screenHeight =  screenSize.getHeight();
@@ -167,7 +171,7 @@ public class Main {
 
                	if(endCF.exists()){
            			endC = ImageIO.read(endCF);
-           			endCL = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", robot, false);
+           			endCL = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", false);
            			if(compareColors(endCL, endC, 1)) {
            				relaunchWar();
            			}
@@ -358,7 +362,7 @@ public class Main {
         	}
         	return false;
     	}
-    	public static BufferedImage image(int x, int y, int xx, int yy, String name, Robot robot, boolean save) throws IOException {
+    	public static BufferedImage image(int x, int y, int xx, int yy, String name, boolean save) throws IOException {
         	BufferedImage bufferedImage = robot.createScreenCapture(new Rectangle(xx,yy,x,y));
         	if(save == true) {
             	File imageFile = new File("BNetAuto Folder/" + name+ ".png");
@@ -373,9 +377,17 @@ public class Main {
 	        war3Dir = WindowsRegistry.readRegistry("HKLM\\Software\\WOW6432Node\\Blizzard Entertainment\\Warcraft III", "GamePath");
 	        }
         	else {
+        		JFileChooser jFileDir = new JFileChooser();
+        		jFileDir.setCurrentDirectory(new File("C:/"));
+        		jFileDir.setDialogTitle("Warcraft 3 Directory");
+        		FileNameExtensionFilter filter = new FileNameExtensionFilter("EXE File","exe");
+        		jFileDir.setFileFilter(filter);
+        		jFileDir.showOpenDialog(frame);
+        		war3Dir = jFileDir.getSelectedFile().getAbsolutePath();
+        		System.out.println(war3Dir);
         		dataLabel.setText("Manual Warcraft Directory Input");
-        		JFrame path = new JFrame("Warcraft 3 Executable Path");
-        		war3Dir = JOptionPane.showInputDialog(path, "Path to (including) /Warcraft III.exe");
+        		//JFrame path = new JFrame("Warcraft 3 Executable Path");
+        		//war3Dir = JOptionPane.showInputDialog(path, "Path to (including) /Warcraft III.exe");
         	}
            	 
        	}
@@ -409,7 +421,7 @@ public class Main {
         	}
         	return true;
     	}
-    	public static boolean colorCheck(int x, int y, int red, int green, int blue, Robot robot) throws AWTException {
+    	public static boolean colorCheck(int x, int y, int red, int green, int blue) throws AWTException {
         	Color color = robot.getPixelColor(x, y);
         	int cr = color.getRed();
         	int cg = color.getGreen();
@@ -472,7 +484,7 @@ public class Main {
     		robot.mouseMove(0, height-1);
     		dataLabel.setText("Waiting for launch");
           	cx = width - 1;
-          	while (colorCheck(1, 1, 0, 0, 0, robot) !=true && (colorCheck(width/2, height/2, 0, 0, 0, robot) == false || colorCheck(width/2, height/2, 255, 255, 255, robot) == false) && colorCheck(cx, 1, 0, 0, 0, robot) !=true) {
+          	while (colorCheck(1, 1, 0, 0, 0) !=true && (colorCheck(width/2, height/2, 0, 0, 0) == false || colorCheck(width/2, height/2, 255, 255, 255) == false) && colorCheck(cx, 1, 0, 0, 0) !=true) {
           		//Wait for screen to fully blacken, and maybe that weird white box to pop up in middle
           	}
           	Thread.sleep(50);
@@ -483,7 +495,7 @@ public class Main {
         		color = robot.getPixelColor(width/2, height/2);
 
           	}
-          	BufferedImage shot1 = image(width, height,0,0,  "Launch", robot, false);
+          	BufferedImage shot1 = image(width, height,0,0,  "Launch", false);
 
           	while(color(shot1, cx, 0).getRed() == 0 && color(shot1, cx, 0).getGreen() == 0 && color(shot1, cx, 0).getBlue() == 0) {
               	cx--;
@@ -492,23 +504,23 @@ public class Main {
               	}
           	}
           	dataLabel.setText("Waiting for menus");
-          	BufferedImage bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+          	BufferedImage bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
           	Thread.sleep(200);
-          	BufferedImage bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);;
+          	BufferedImage bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);;
           	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
-              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);
               	Thread.sleep(300);
-              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
           	}
           	dataLabel.setText("Opening Battle.net");
               	robot.keyPress(KeyEvent.VK_B);
-               	bottomRight1 = image((width - cx) / 2 - ((width - cx) / 15), (width - cx) / 2 - ((width - cx) / 10), width - cx + ((width - cx) / 20), height / 3 - height / 30, "testpic", robot, false);
+               	bottomRight1 = image((width - cx) / 2 - ((width - cx) / 15), (width - cx) / 2 - ((width - cx) / 10), width - cx + ((width - cx) / 20), height / 3 - height / 30, "testpic", false);
                	while(checkWhite(bottomRight1) == false) {
                    	Thread.sleep(50);
-                   	bottomRight1 = image((width - cx) / 2 - ((width - cx) / 15), (width - cx) / 2 - ((width - cx) / 10), width - cx + ((width - cx) / 20), height / 3 - height / 30, "testpic", robot, false);
+                   	bottomRight1 = image((width - cx) / 2 - ((width - cx) / 15), (width - cx) / 2 - ((width - cx) / 10), width - cx + ((width - cx) / 20), height / 3 - height / 30, "testpic", false);
                	}
                	Thread.sleep(100);
-               	bottomRight2 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic", robot, false);
+               	bottomRight2 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic", false);
                	dataLabel.setText("Logging In");
                	Thread.sleep(200);
                    	for(int cnt = 0; cnt < pass.length(); cnt++) {
@@ -518,7 +530,7 @@ public class Main {
                    	Thread.sleep(100);
                    	robot.keyPress(KeyEvent.VK_ENTER);
                    	Thread.sleep(250);
-               	bottomRight1 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic2", robot, false);
+               	bottomRight1 = image(cx / 3, height / 2, width-cx, height / 2,  "testpic2", false);
                	if(compareColors(bottomRight1, bottomRight2, 4) == false) {
                      	for(int cnt = 0; cnt < pass.length(); cnt++) {
                          	typeCharacter(Character.toString(pass.charAt(cnt)));
@@ -529,25 +541,25 @@ public class Main {
                	Thread.sleep(1250);
               	launching = false;
                	dataLabel.setText("Waiting for Menus");
-              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
               	Thread.sleep(200);
-              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);
               	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
-                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);
                   	Thread.sleep(100);
-                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
               	}
               	Thread.sleep(50);
               	robot.keyPress(KeyEvent.VK_G);
                	Thread.sleep(200);
                	dataLabel.setText("Waiting for Game Name Input");
-              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+              	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
               	Thread.sleep(200);
-              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+              	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);
               	while (compareColors(bottomRight1, bottomRight2, 1) == false) {
-                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", robot, false);
+                  	bottomRight2 = image(cx/20, height/20, cx - cx/20, height - height/20, "null", false);
                   	Thread.sleep(100);
-                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", robot, false);
+                  	bottomRight1 = image(cx/20, height/20, cx - cx/20, height - height/20, "BottomRight1", false);
               	}
               	if((Integer) nextGameInt >= 0 && gameNames[(Integer) nextGameInt].length() >= 0){
               		for(int cnt = 0; cnt < gameNames[(Integer) nextGameInt].length(); cnt++) {
@@ -558,21 +570,24 @@ public class Main {
               	}
 
     	}
-    	public static void endC(Robot robot) {
+    	public static void endC() {
    		 JFrame f=new JFrame("Grab End Screen");       	 
-     	 JButton b=new JButton("Click me on game end");    
-     	 b.setBounds(25,25,175, 20);    
-     	 f.add(b);    
-     	 f.setSize(250,100);    
-     	 f.setLayout(null);    
-     	 f.setVisible(true);    
+     	 JButton b=new JButton("Click when the below end game option is on screen");    
+     	 b.setBounds(25,25,350, 20);
+     	 f.add(b);
+     	 f.setSize(425,150);
+     	 JLabel imageExample = new JLabel(new ImageIcon("BNetAuto Folder/endExample.png"));
+     	 imageExample.setBounds(85,50,240,46);
+     	 f.add(imageExample);
+     	 f.setLayout(null);
+     	 f.setVisible(true);
      	 f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
      	 b.addActionListener(new ActionListener() {
    		 @Override
    		 public void actionPerformed(ActionEvent arg0) {
    			 try {
    				 @SuppressWarnings("unused")
-				BufferedImage endC = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", robot, true);
+				BufferedImage endC = image(width/8, height/23,width/2-width/16,height/2 - height/17,  "endC", true);
    				 f.dispose();
    			 } catch (IOException e) {
    				 e.printStackTrace();
